@@ -1,0 +1,83 @@
+//1. Starter Code
+mkdir backend-track
+cd backend-track
+npm init -y
+npm install express body-parser sqlite3
+npm install --save-dev typescript ts-node @types/node @types/express
+npx tsc --init
+//2. logging_middleware/index.ts
+export function Log(stack: string, level: string, pkg: string, message: string) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] [${stack}] [${level}] [${pkg}] ${message}`);
+}
+//3. vehicle_maintenance_scheduler/app.ts
+import express from "express";
+import bodyParser from "body-parser";
+import { Log } from "../logging_middleware";
+
+const app = express();
+app.use(bodyParser.json());
+
+let vehicles: any[] = [];
+
+// Add vehicle
+app.post("/vehicle", (req, res) => {
+  const { name, model, lastServiceDate } = req.body;
+  vehicles.push({ id: vehicles.length + 1, name, model, lastServiceDate });
+  Log("backend", "info", "controller", `Vehicle ${name} added`);
+  res.status(201).json({ message: "Vehicle added successfully" });
+});
+
+// Get schedule
+app.get("/vehicle/:id/schedule", (req, res) => {
+  const vehicle = vehicles.find(v => v.id == req.params.id);
+  if (!vehicle) {
+    Log("backend", "error", "controller", "Vehicle not found");
+    return res.status(404).json({ error: "Vehicle not found" });
+  }
+  res.json({ schedule: `Next service due for ${vehicle.name}` });
+});
+
+export default app;
+//4. notification_app_be/app.ts
+import express from "express";
+import bodyParser from "body-parser";
+import { Log } from "../logging_middleware";
+
+const app = express();
+app.use(bodyParser.json());
+
+let notifications: any[] = [];
+
+// Send notification
+app.post("/notification", (req, res) => {
+  const { type, message } = req.body;
+  notifications.push({ id: notifications.length + 1, type, message });
+  Log("backend", "info", "controller", `Notification sent: ${message}`);
+  res.json({ status: "success", message });
+});
+
+// List notifications
+app.get("/notification", (req, res) => {
+  res.json(notifications);
+});
+
+export default app;
+//5. Main Server (index.ts)
+import express from "express";
+import vehicleApp from "./vehicle_maintenance_scheduler/app";
+import notificationApp from "./notification_app_be/app";
+
+const app = express();
+app.use("/api", vehicleApp);
+app.use("/api", notificationApp);
+
+app.listen(3000, () => {
+  console.log("Backend server running on http://localhost:3000");
+});
+
+
+
+
+
+
